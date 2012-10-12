@@ -102,7 +102,10 @@
   </div>
   <script type="text/javascript">
     document.addEventListener("DOMContentLoaded", function() {
-      navigator.getUserMedia  = navigator.webkitGetUserMedia;
+        navigator.getUserMedia  = navigator.webkitGetUserMedia;
+
+        var isChrome = navigator.userAgent.indexOf('Chrome') > -1;
+        if(!isChrome) $("html").addClass("notChrome");
 
         var TimeLapsy = function(options) {
           this.video = options.video;
