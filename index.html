@@ -1,0 +1,246 @@
+<!DOCTYPE HTML>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Time Lapsy</title>
+  <script src="js/whammy.js"></script>
+  <script src="js/zepto.min.js"></script>
+  <style type="text/css">
+    video {
+      border: 1px solid black;
+    }
+
+    body {
+      padding: 0;
+      margin: 0;
+      font-family: Arial;
+      background: #ccc;
+    }
+
+    button {
+      width: 40px;
+      height: 40px;
+      position: relative;
+      top: -10px
+    }
+
+    input[type="number"] {
+      font-size: 2em;
+      width: 80px;
+      height: 40px;
+      background: none;
+      border: none;
+    }
+
+    #photoTime {
+      font-size: 5em;
+      float: right
+    }
+
+    #container {
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      position: fixed;
+      display: table;
+    }
+
+    #redDot {
+      width: 100px;
+      height: 100px;
+      border-radius: 50%;
+      background-image: -webkit-radial-gradient(50% 50%, circle cover, #d10000, transparent);
+    }
+
+    #redDot.shine {
+      background-image: -webkit-radial-gradient(50% 50%, circle cover, red, transparent);
+    }
+
+    .tools {
+      float: right;
+      position: relative;
+      right: 300px;
+      top: 100px
+    }
+
+    .videos {
+      float: left;
+      border: 1px solid red;
+      position: relative;
+      width: 400px;
+      height: 400px;
+      top: 300px;
+      left: 300px;
+      overflow: scroll;
+    }
+  </style>
+</head>
+<body>
+  <div id="container">
+    <div id="camera">
+        <div class="tools">
+          <div id="redDot"></div>
+          <div>
+            <input id="interval" type="number" min="2" max="120" value="2"/>
+            <button id="start">►</button>
+            <button id="end">█</button>
+            <span id="status"></span>
+          </div>
+          <video id="preview" width="640" height="480"></video>
+        </div>
+        <div id="videos" class="videos"> </div>
+    </div>
+  </div>
+  <script type="text/javascript">
+    document.addEventListener("DOMContentLoaded", function() {
+      navigator.getUserMedia  = navigator.webkitGetUserMedia;
+
+        var TimeLapsy = function(options) {
+          this.video = options.video;
+          this.interval = options.interval;
+          this.images = [];
+
+          this.canvas = document.createElement("canvas");
+          this.canvas.width = 640;
+          this.canvas.height = 480;
+          this.ctx = this.canvas.getContext('2d');
+        };
+
+        TimeLapsy.prototype = {
+          status: function(message) {
+            var status = document.getElementById("status");
+            status.textContent = message;
+          },
+
+          snapshot: function() {
+            this.ctx.drawImage(this.video, 0, 0,
+              this.video.clientWidth,
+              this.video.clientHeight
+            );
+
+            var imageData = this.ctx.getImageData(0, 0,
+              this.video.clientWidth,
+              this.video.clientHeight
+            );
+
+            this.images.push(imageData);
+
+            console.log("** Snapshot!");
+          },
+
+          start: function() {
+            var self = this;
+            this.status("Recording...");
+            this.intervalId = setInterval(function() {
+              var metronome = $("#redDot");
+
+              metronome.addClass("shine");
+              self.snapshot.call(self);
+              setTimeout(function() {
+                metronome.removeClass("shine");
+              }, 1000);
+            }, 1000 * this.interval);
+          },
+
+          end: function() {
+            clearInterval(this.intervalId);
+            this.encode();
+          },
+
+          encode: function() {
+            this.capture = new Whammy.Video(24);
+            this.encodeFrame(0);
+          },
+
+          encodeFrame: function(frameIndex) {
+            if(frameIndex < this.images.length) {
+              console.log("** Encoding frame", frameIndex);
+              this.ctx.putImageData(this.images[frameIndex], 0, 0);
+              this.capture.add(this.ctx);
+              delete this.images[frameIndex];
+              frameIndex++;
+
+              // Let The clock breathe
+              setTimeout(function(video) {
+                video.encodeFrame(frameIndex);
+              }, 5, this);
+            } else {
+              this.status("Generating video");
+              var output = this.capture.compile();
+              var url = window.webkitURL.createObjectURL(output);
+              console.log("** Video done");
+
+              this.outputVideo(url);
+            }
+          },
+
+          outputVideo: function(url) {
+            var item = document.createElement("li");
+            var downloadUrl = document.createElement("a");
+            var preview = document.createElement("video");
+
+            var videos = document.getElementById("videos");
+            var date = new Date();
+
+            this.status("");
+
+            preview.src = url;
+            preview.width = 120;
+            preview.loop = true;
+            preview.setAttribute("controls", "controls");
+
+            downloadUrl.href = url;
+            downloadUrl.download = "TimeLapse.webm";
+            downloadUrl.textContent = date.toString();
+
+            item.appendChild(preview);
+            item.appendChild(downloadUrl);
+
+            videos.appendChild(item);
+          }
+        };
+
+        var interval = document.getElementById("interval");
+        var snapInterval = document.getElementById("snapInterval");
+        var start = document.getElementById("start");
+        var end = document.getElementById("end");
+
+        end.disabled = true;
+
+        start.addEventListener("click", function() {
+          start.disabled = true;
+          interval.disabled = true;
+
+          navigator.getUserMedia({ audio: false, video: true }, function(stream) {
+            var video = document.getElementById("preview");
+            var blob = window.webkitURL.createObjectURL(stream);
+
+            var timeLapsy = new TimeLapsy({
+              video: video,
+              interval: interval.value
+            });
+
+            end.disabled = false;
+
+            video.autoplay = true;
+            video.src = blob;
+
+            timeLapsy.start();
+
+            end.addEventListener("click", function() {
+              timeLapsy.end();
+              start.disabled = false;
+              interval.disabled = false;
+              end.disabled = true;
+            });
+          }, function() {
+            start.disabled = false;
+            interval.disabled = false;
+          });
+        });
+
+    });
+  </script>
+</body>
+</html>
