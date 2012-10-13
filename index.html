@@ -5,6 +5,7 @@
   <title>Time Lapsy</title>
   <script src="js/whammy.js"></script>
   <script src="js/zepto.min.js"></script>
+  <link rel="stylesheet" href="css/gh.css" />
   <style type="text/css">
     video {
       border: 1px solid black;
@@ -25,7 +26,7 @@
     }
 
     button {
-      width: 40px;
+      width: 80px;
       height: 40px;
       position: relative;
       top: -10px
@@ -84,6 +85,12 @@
   </style>
 </head>
 <body>
+  <div class="github-fork-ribbon-wrapper right">
+    <div class="github-fork-ribbon">
+      <a href="https://github.com/elcuervo/timelapsy">Fork me on GitHub</a>
+    </div>
+  </div>
+
   <div id="container">
     <div id="camera">
         <div class="tools">
@@ -91,7 +98,7 @@
           <div>
             <input id="interval" type="number" min="2" max="120" value="2"/>
             seconds
-            <button id="start">►</button>
+            <button id="start">record</button>
             <button id="end">█</button>
             <span id="status"></span>
           </div>
@@ -201,6 +208,7 @@
 
           outputVideo: function(url) {
             var item = document.createElement("li");
+            var downloadP = document.createElement("p");
             var downloadUrl = document.createElement("a");
             var preview = document.createElement("video");
 
@@ -210,7 +218,7 @@
             this.status("");
 
             preview.src = url;
-            preview.width = 120;
+            preview.width = 240;
             preview.loop = true;
             preview.setAttribute("controls", "controls");
 
@@ -218,8 +226,10 @@
             downloadUrl.download = "TimeLapse.webm";
             downloadUrl.textContent = date.toString();
 
+            downloadP.append(downloadUrl);
+
             item.appendChild(preview);
-            item.appendChild(downloadUrl);
+            item.appendChild(downloadP);
 
             videos.appendChild(item);
           }
