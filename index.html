@@ -115,6 +115,7 @@
           encodeFrame: function(frameIndex) {
             if(frameIndex < this.images.length) {
               console.log("** Encoding frame", frameIndex);
+              this.status("Encoding frame " + frameIndex);
               this.ctx.putImageData(this.images[frameIndex], 0, 0);
               this.capture.add(this.ctx);
               delete this.images[frameIndex];
